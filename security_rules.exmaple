@@ -1,0 +1,39 @@
+# 防止解析不需要的文件类型
+location ~* \.(bak|config|sql|fla|psd|ini|log|sh|inc|swp|dist|engine|git|svn)$ {
+    deny all;
+    return 404;
+}
+
+# 防止敏感文件访问
+location ~* /\.{1,2}(git|svn|hg|bzr|env|config|DS_Store|htaccess|htpasswd)$ {
+    deny all;
+    return 404;
+}
+
+# 阻止不允许的请求方法
+if ($method_allowed = 0) {
+    return 444;
+}
+
+# 阻止恶意机器人
+if ($bad_bot = 1) {
+    return 444;
+}
+
+# 限制特殊字符
+if ($request_uri ~* "[+<>\"'%]") {
+    return 444;
+}
+
+# 防止SQL注入
+if ($query_string ~* "union.*select.*\b") {
+    return 444;
+}
+if ($query_string ~* "concat.*\b") {
+    return 444;
+}
+
+# XSS防护
+if ($request_uri ~* "<[^>]*>") {
+    return 444;
+}

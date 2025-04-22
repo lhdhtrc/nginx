@@ -1,0 +1,91 @@
+# 主服务器配置
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+
+    # 引入基础配置
+    include /etc/nginx/conf.d/ssl_common.conf;
+    include /etc/nginx/conf.d/security_headers.conf;
+
+    # 根目录和默认首页
+    root /usr/share/nginx/html;
+    index index.html index.htm;
+
+    # 字符集
+    charset utf-8;
+
+    # 客户端限制
+    client_max_body_size 10M;
+    client_body_buffer_size 128k;
+
+    # 静态文件处理
+    location ~* \.(jpg|jpeg|png|gif|ico|css|js)$ {
+        expires 30d;
+        add_header Cache-Control "public, no-transform";
+        add_header Vary Accept;
+        limit_req zone=two burst=20 nodelay;
+        try_files $uri =404;
+    }
+
+    # 字体文件处理
+    location ~* \.(eot|ttf|woff|woff2)$ {
+        expires 30d;
+        add_header Cache-Control "public, no-transform";
+        add_header Access-Control-Allow-Origin *;
+        add_header Vary Accept-Encoding;
+        limit_req zone=two burst=20 nodelay;
+        try_files $uri =404;
+    }
+
+    # API 处理
+    location /api/ {
+        proxy_pass http://backend;
+        include /etc/nginx/conf.d/proxy.conf;
+        limit_req zone=dynamic burst=10 nodelay;
+        limit_conn addr 10;
+    }
+
+    # 管理界面
+    location /admin/ {
+        proxy_pass http://backend;
+        include /etc/nginx/conf.d/proxy.conf;
+        allow 127.0.0.1;
+        allow 192.168.0.0/16;
+        deny all;
+        limit_req zone=one burst=3 nodelay;
+        limit_conn addr 5;
+    }
+
+    # 监控端点
+    location /status {
+        allow 127.0.0.1;
+        allow 192.168.0.0/16;
+        deny all;
+        stub_status on;
+        access_log off;
+    }
+
+    # 默认处理
+    location / {
+        proxy_pass http://backend;
+        include /etc/nginx/conf.d/proxy.conf;
+        limit_req zone=one burst=5 nodelay;
+    }
+}
+
+# 流媒体服务器
+server {
+    listen 1935;
+    server_name _;
+    
+    application live {
+        live on;
+        record off;
+        
+        allow publish 127.0.0.1;
+        deny publish all;
+        
+        allow play all;
+    }
+} 

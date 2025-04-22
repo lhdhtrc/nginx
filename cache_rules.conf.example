@@ -1,0 +1,27 @@
+# 缓存清理
+location ~ /purge(/.*) {
+    allow 127.0.0.1;
+    allow 192.168.0.0/16;
+    deny all;
+    proxy_cache_purge my_cache "$scheme$request_method$host$1";
+}
+
+# 静态文件缓存规则
+location ~* \.(jpg|jpeg|png|gif|ico|css|js)$ {
+    proxy_cache my_cache;
+    proxy_cache_valid 200 24h;
+    proxy_cache_use_stale error timeout http_500 http_502 http_503 http_504;
+    add_header X-Cache-Status $upstream_cache_status;
+    expires 30d;
+    add_header Cache-Control "public, no-transform";
+}
+
+# API缓存规则
+location /api/ {
+    proxy_cache my_cache;
+    proxy_cache_valid 200 5m;
+    proxy_cache_use_stale error timeout http_500 http_502 http_503 http_504;
+    proxy_cache_lock on;
+    proxy_cache_lock_timeout 5s;
+    add_header X-Cache-Status $upstream_cache_status;
+} 
