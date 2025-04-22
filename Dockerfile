@@ -152,6 +152,7 @@ RUN \
 # 克隆并编译Brotli模块
 RUN \
   echo "Cloning ngx_brotli ..." \
+  && apk add --no-cache --virtual .brotli-build-deps \
   && cd /usr/src \
   && git clone ${BROTLI_URL} \
   && cd /usr/src/ngx_brotli \
