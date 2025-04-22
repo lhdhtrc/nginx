@@ -98,10 +98,6 @@ ARG LUA_NGINX_URL="https://github.com/openresty/lua-nginx-module/archive/refs/ta
 ARG CACHE_PURGE_VERSION="2.3"
 ARG CACHE_PURGE_URL="https://github.com/nginx-modules/ngx_cache_purge/archive/refs/tags/${CACHE_PURGE_VERSION}.tar.gz"
 
-# 虚拟主机流量统计模块
-ARG VTS_VERSION="0.2.1"
-ARG VTS_URL="https://github.com/vozlt/nginx-module-vts/archive/refs/tags/v${VTS_VERSION}.tar.gz"
-
 # 设置工作目录
 WORKDIR /usr/src/
 
@@ -182,6 +178,26 @@ RUN \
   && export LUAJIT_INC=/usr/local/include/luajit-2.1 \
   && ln -sf /usr/local/lib/libluajit-5.1.so.2 /usr/lib/libluajit-5.1.so.2
 
+# 安装lua-resty-core
+RUN \
+  echo "Installing lua-resty-core ..." \
+  && cd /usr/src \
+  && git clone https://github.com/openresty/lua-resty-core.git \
+  && cd lua-resty-core \
+  && mkdir -p /usr/local/share/luajit-2.1.0-beta3/resty \
+  && make install LUA_LIB_DIR=/usr/local/openresty/lualib \
+  && ln -sf /usr/local/openresty/lualib/resty/core /usr/local/share/luajit-2.1.0-beta3/resty/core
+
+# 安装lua-resty-lrucache
+RUN \
+  echo "Installing lua-resty-lrucache ..." \
+  && cd /usr/src \
+  && git clone https://github.com/openresty/lua-resty-lrucache.git \
+  && cd lua-resty-lrucache \
+  && mkdir -p /usr/local/share/luajit-2.1.0-beta3/resty \
+  && make install LUA_LIB_DIR=/usr/local/openresty/lualib \
+  && ln -sf /usr/local/openresty/lualib/resty/lrucache /usr/local/share/luajit-2.1.0-beta3/resty/lrucache
+
 # 下载并编译ngx_devel_kit
 RUN \
   echo "Downloading ngx_devel_kit ..." \
@@ -202,13 +218,6 @@ RUN \
   && cd /usr/src \
   && wget -O ngx_cache_purge-${CACHE_PURGE_VERSION}.tar.gz ${CACHE_PURGE_URL} \
   && tar -xzvf ngx_cache_purge-${CACHE_PURGE_VERSION}.tar.gz
-
-# 下载并编译虚拟主机流量统计模块
-RUN \
-  echo "Downloading nginx-module-vts ..." \
-  && cd /usr/src \
-  && wget -O nginx-module-vts-${VTS_VERSION}.tar.gz ${VTS_URL} \
-  && tar -xzvf nginx-module-vts-${VTS_VERSION}.tar.gz
 
 # 下载并编译Headers More模块
 RUN \
@@ -331,7 +340,6 @@ RUN \
 		--add-module=/usr/src/ngx_devel_kit-${NDK_VERSION} \
 		--add-module=/usr/src/lua-nginx-module-${LUA_NGINX_VERSION} \
 		--add-module=/usr/src/ngx_cache_purge-${CACHE_PURGE_VERSION} \
-		--add-module=/usr/src/nginx-module-vts-${VTS_VERSION} \
 		--with-openssl=/usr/src/openssl-${OPENSSL_VERSION} \
 		--with-openssl-opt="zlib enable-tls1_3 enable-weak-ssl-ciphers enable-ec_nistp_64_gcc_128 -ljemalloc -Wl,-flto" \
 	&& make -j$(getconf _NPROCESSORS_ONLN)
@@ -446,3 +454,30 @@ STOPSIGNAL SIGTERM
 
 # 启动命令
 CMD ["nginx", "-g", "daemon off;"]
+
+# 安装OpenResty
+RUN \
+  echo "Installing OpenResty ..." \
+  && mkdir -p /usr/src \
+  && cd /usr/src \
+  && apk add --no-cache openresty git make
+
+# 安装lua-resty-core
+RUN \
+  echo "Installing lua-resty-core ..." \
+  && cd /usr/src \
+  && git clone https://github.com/openresty/lua-resty-core.git \
+  && cd lua-resty-core \
+  && mkdir -p /usr/local/share/luajit-2.1.0-beta3/resty \
+  && make install LUA_LIB_DIR=/usr/local/openresty/lualib \
+  && ln -sf /usr/local/openresty/lualib/resty/core /usr/local/share/luajit-2.1.0-beta3/resty/core
+
+# 安装lua-resty-lrucache
+RUN \
+  echo "Installing lua-resty-lrucache ..." \
+  && cd /usr/src \
+  && git clone https://github.com/openresty/lua-resty-lrucache.git \
+  && cd lua-resty-lrucache \
+  && mkdir -p /usr/local/share/luajit-2.1.0-beta3/resty \
+  && make install LUA_LIB_DIR=/usr/local/openresty/lualib \
+  && ln -sf /usr/local/openresty/lualib/resty/lrucache /usr/local/share/luajit-2.1.0-beta3/resty/lrucache
